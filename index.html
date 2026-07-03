@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SARS — Smart Activity Reminder System</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="navbar">
+    <div class="brand">
+      <span class="brand-mark">S</span>
+      <span class="brand-name">BSU&nbsp;SARS</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#workflow">Workflow</a></li>
+      <li><a href="#nodes">Nodes</a></li>
+      <li><a href="#data">Data Model</a></li>
+      <li><a href="#register">Register</a></li>
+      <li><a href="#stack">Tech Stack</a></li>
+    </ul>
+  </nav>
+
+  <div class="hero">
+    <p class="eyebrow">Bishop Stuart University</p>
+    <h1>Smart Activity Reminder System</h1>
+    <p class="hero-subtitle">
+      An automated n8n workflow that watches scheduled student activities and fires timely
+      Email &amp; WhatsApp reminders — no manual follow-up required.
+    </p>
+    <div class="hero-badges">
+      <span class="badge">⏱ Runs every minute</span>
+      <span class="badge">📧 Email + WhatsApp</span>
+      <span class="badge">📊 Google Sheets backed</span>
+      <span class="badge">🟢 Active</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <section id="overview" class="section">
+    <h2>Overview</h2>
+    <p class="lead">
+      <strong>SARS_Workflow_A_Activity_Reminder_Dispatch</strong> is a scheduled n8n automation that
+      reads upcoming activities from a Google Sheet, works out which ones are due to start in the
+      next 15 minutes, and notifies every enrolled student by email and WhatsApp — logging each
+      notification and marking the activity as handled so nobody gets reminded twice.
+    </p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <span class="stat-number">1 min</span>
+        <span class="stat-label">Trigger interval</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">0–15</span>
+        <span class="stat-label">Minute reminder window</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">2</span>
+        <span class="stat-label">Notification channels</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">12</span>
+        <span class="stat-label">Workflow nodes</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="workflow" class="section alt">
+    <h2>How the Workflow Runs</h2>
+    <p class="lead">Every execution follows the same pipeline, end to end:</p>
+
+    <ol class="timeline">
+      <li>
+        <div class="timeline-marker">1</div>
+        <div class="timeline-content">
+          <h3>Schedule Trigger</h3>
+          <p>Fires automatically every minute to kick off a fresh check of the activity sheet.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">2</div>
+        <div class="timeline-content">
+          <h3>Read Activities Sheet</h3>
+          <p>Pulls every row from the <em>Read Activities</em> tab of the master Google Sheet.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">3</div>
+        <div class="timeline-content">
+          <h3>Calculate Time Until Activity</h3>
+          <p>A Code node computes <code>minutesUntil</code> for each activity by comparing its date/time to now.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">4</div>
+        <div class="timeline-content">
+          <h3>Due Now Filter</h3>
+          <p>Keeps only activities starting within 0–15 minutes that haven't already been notified.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">5</div>
+        <div class="timeline-content">
+          <h3>Loop Over Due Activities</h3>
+          <p>Processes each due activity one at a time, item by item.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">6</div>
+        <div class="timeline-content">
+          <h3>Get Student Details</h3>
+          <p>Looks up the enrolled student's contact info from the <em>Students</em> sheet by <code>student_id</code>.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">7</div>
+        <div class="timeline-content">
+          <h3>Format Reminder Messages</h3>
+          <p>Builds the email subject/body and a shorter WhatsApp message using the activity + student data.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">8</div>
+        <div class="timeline-content">
+          <h3>Send Email &amp; WhatsApp Reminder</h3>
+          <p>Dispatches both notifications in parallel via Gmail and Twilio WhatsApp.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">9</div>
+        <div class="timeline-content">
+          <h3>Log Notifications</h3>
+          <p>Appends a record of each channel's delivery to the <em>Notification Log</em> sheet.</p>
+        </div>
+      </li>
+      <li>
+        <div class="timeline-marker">10</div>
+        <div class="timeline-content">
+          <h3>Mark Activity as Notified</h3>
+          <p>Flags the activity row so the same reminder is never sent twice, then loops to the next item.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section id="nodes" class="section">
+    <h2>Node Reference</h2>
+    <p class="lead">Every node in the n8n canvas, grouped by role.</p>
+
+    <div class="cards-grid">
+      <div class="card">
+        <h3>🕐 Schedule Trigger</h3>
+        <p class="card-tag">Trigger</p>
+        <p>Kicks off the workflow on a 1-minute interval, around the clock.</p>
+      </div>
+      <div class="card">
+        <h3>📄 Read Activities Sheet</h3>
+        <p class="card-tag">Google Sheets</p>
+        <p>Reads all rows from the Activities tab for evaluation.</p>
+      </div>
+      <div class="card">
+        <h3>🧮 Calculate Time Until Activity</h3>
+        <p class="card-tag">Code</p>
+        <p>Computes minutes remaining until each activity's start time.</p>
+      </div>
+      <div class="card">
+        <h3>🔎 Due Now Filter</h3>
+        <p class="card-tag">If</p>
+        <p>Passes only activities 0–15 minutes out that aren't marked notified.</p>
+      </div>
+      <div class="card">
+        <h3>🔁 Loop Over Due Activities</h3>
+        <p class="card-tag">Split In Batches</p>
+        <p>Iterates the due activities one at a time for safe, ordered processing.</p>
+      </div>
+      <div class="card">
+        <h3>🎓 Get Student Details</h3>
+        <p class="card-tag">Google Sheets</p>
+        <p>Fetches the student's name, email and WhatsApp number by <code>student_id</code>.</p>
+      </div>
+      <div class="card">
+        <h3>✍️ Format Reminder Messages</h3>
+        <p class="card-tag">Code</p>
+        <p>Generates the email and WhatsApp message content in Uganda local time.</p>
+      </div>
+      <div class="card">
+        <h3>📧 Send Email Reminder</h3>
+        <p class="card-tag">Gmail</p>
+        <p>Emails the student the activity name, schedule and time remaining.</p>
+      </div>
+      <div class="card">
+        <h3>💬 Send WhatsApp Reminder</h3>
+        <p class="card-tag">Twilio</p>
+        <p>Sends a short WhatsApp reminder to the student's number.</p>
+      </div>
+      <div class="card">
+        <h3>🗂 Log Email / WhatsApp Notification</h3>
+        <p class="card-tag">Google Sheets</p>
+        <p>Appends a row to the Notification Log for auditing each send.</p>
+      </div>
+      <div class="card">
+        <h3>✅ Mark Activity as Notified</h3>
+        <p class="card-tag">Google Sheets</p>
+        <p>Updates the activity row so it is excluded from future runs.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="data" class="section alt">
+    <h2>Data Model</h2>
+    <p class="lead">The workflow reads and writes three tabs in one Google Sheet.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Sheet</th><th>Key Columns</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Read&nbsp;Activities</td>
+            <td><code>activity_id</code>, <code>student_id</code>, <code>activity_name</code>, <code>activity_date</code>, <code>activity_time</code>, <code>notified</code></td>
+            <td>Master list of scheduled activities and their notification status.</td>
+          </tr>
+          <tr>
+            <td>Students</td>
+            <td><code>student_id</code>, <code>full_name</code>, <code>email</code>, <code>whatsapp_no</code></td>
+            <td>Contact directory used to resolve who to notify.</td>
+          </tr>
+          <tr>
+            <td>Notification&nbsp;Log</td>
+            <td><code>log_id</code>, <code>activity_id</code>, <code>student_id</code>, <code>channel</code>, <code>sent_at</code>, <code>status</code></td>
+            <td>Audit trail of every email/WhatsApp reminder sent.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="register" class="section alt">
+    <h2>Register</h2>
+    <p class="lead">
+      Submit directly into the same Google Sheet the workflow reads from. New students appear in
+      the <em>Students</em> tab and new activities appear in the <em>Read Activities</em> tab, ready
+      to be picked up by the next scheduled reminder run.
+    </p>
+
+    <div class="forms-grid">
+
+      <form id="student-form" class="form-card" novalidate>
+        <h3>🎓 Student Registration</h3>
+        <p class="card-tag">Writes to: Students</p>
+
+        <label for="student-id">Student ID</label>
+        <input type="text" id="student-id" name="student_id" placeholder="e.g. BSU-2026-0142" required>
+
+        <label for="full-name">Full Name</label>
+        <input type="text" id="full-name" name="full_name" placeholder="e.g. Amina Nakato" required>
+
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="e.g. amina@example.com" required>
+
+        <label for="whatsapp-no">WhatsApp Number</label>
+        <input type="tel" id="whatsapp-no" name="whatsapp_no" placeholder="e.g. +256700000000" required>
+
+        <button type="submit">Register Student</button>
+        <p class="form-status" data-status></p>
+      </form>
+
+      <form id="activity-form" class="form-card" novalidate>
+        <h3>📅 Activity Scheduling</h3>
+        <p class="card-tag">Writes to: Read Activities</p>
+
+        <label for="activity-id">Activity ID</label>
+        <input type="text" id="activity-id" name="activity_id" placeholder="e.g. ACT-0087" required>
+
+        <label for="activity-student-id">Student ID</label>
+        <input type="text" id="activity-student-id" name="student_id" placeholder="e.g. BSU-2026-0142" required>
+
+        <label for="activity-name">Activity Name</label>
+        <input type="text" id="activity-name" name="activity_name" placeholder="e.g. Chemistry Lab Session" required>
+
+        <label for="activity-date">Date</label>
+        <input type="date" id="activity-date" name="activity_date" required>
+
+        <label for="activity-time">Time</label>
+        <input type="time" id="activity-time" name="activity_time" required>
+
+        <button type="submit">Schedule Activity</button>
+        <p class="form-status" data-status></p>
+      </form>
+
+    </div>
+  </section>
+
+  <section id="stack" class="section">
+    <h2>Tech Stack</h2>
+    <div class="stack-grid">
+      <div class="stack-item">
+        <span class="stack-icon">⚙️</span>
+        <span>n8n Automation</span>
+      </div>
+      <div class="stack-item">
+        <span class="stack-icon">📊</span>
+        <span>Google Sheets</span>
+      </div>
+      <div class="stack-item">
+        <span class="stack-icon">📧</span>
+        <span>Gmail API</span>
+      </div>
+      <div class="stack-item">
+        <span class="stack-icon">💬</span>
+        <span>Twilio WhatsApp</span>
+      </div>
+      <div class="stack-item">
+        <span class="stack-icon">🧩</span>
+        <span>JavaScript (Code Nodes)</span>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Bishop Stuart University — Smart Activity Reminder System (SARS)</p>
+  <p class="footer-sub">Workflow A · Activity Reminder Dispatch</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
